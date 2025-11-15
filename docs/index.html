@@ -117,6 +117,7 @@
     };
     firebase.initializeApp(firebaseConfig);
     var db = firebase.database();
+    var auth = firebase.auth();
   </script>
 </head>
 <body>
@@ -241,7 +242,7 @@ upload.addEventListener('change', (e) => {
 
 
     db.ref('tokens').on('value', (snapshot) => {
-      const tokens = snapshot.val();
+      const tokens = snapshot.val() || {};
       document.querySelectorAll('.token').forEach(el => el.remove());
       for (let key in tokens) {
         const data = tokens[key];
@@ -341,8 +342,9 @@ upload.addEventListener('change', (e) => {
         startRealtimeSync();
       })
       .catch((error) => {
-        console.error("❌ Přihlášení selhalo:", error);
+        console.error("❌ Chyba přihlášení:", error);
       });
+
     const deleteAllTokensBtn = document.getElementById('deleteAllTokensBtn');
 
 deleteAllTokensBtn.addEventListener('click', () => {
