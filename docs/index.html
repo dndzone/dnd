@@ -241,79 +241,43 @@ upload.addEventListener('change', (e) => {
 });
 
 
-    db.ref('tokens').on('value', (snapshot) => {
-      const tokens = snapshot.val() || {};
-      document.querySelectorAll('.token').forEach(el => el.remove());
-      for (let key in tokens) {
-        const data = tokens[key];
-        const img = document.createElement('img');
-        img.src = data.src;
-        img.classList.add('token');
-        img.draggable = true;
-        img.style.top = `${data.top}px`;
-        img.style.left = `${data.left}px`;
-        img.style.width = `${data.width}px`;
-        img.style.height = `${data.height}px`;
-
-        let offsetX, offsetY;
-
-        img.addEventListener('dragstart', (e) => {
-          offsetX = e.offsetX;
-          offsetY = e.offsetY;
-          e.dataTransfer.setData('tokenId', data.id);
-        });
-
-        img.addEventListener('dragend', (e) => {
-          const rect = grid.getBoundingClientRect();
-          const newLeft = e.clientX - rect.left - offsetX;
-          const newTop = e.clientY - rect.top - offsetY;
-          db.ref('tokens/' + data.id).update({ left: newLeft, top: newTop });
-        });
-
-        grid.appendChild(img);
-      }
-    });
-
-    document.querySelectorAll('.library-token').forEach(token => {
-      token.addEventListener('dragstart', (e) => {
-        e.dataTransfer.setData('src', token.src);
-      });
-    });
-
-    grid.addEventListener('dragover', (e) => e.preventDefault());
-    grid.addEventListener('drop', (e) => {
-  e.preventDefault();
-  const rect = grid.getBoundingClientRect();
-  const tokenId = e.dataTransfer.getData('tokenId'); 
-  const src = e.dataTransfer.getData('src');          
-
-  if (tokenId) {
-
-    const newLeft = e.clientX - rect.left;
-    const newTop = e.clientY - rect.top;
-    db.ref('tokens/' + tokenId).update({
-      left: newLeft,
-      top: newTop
-    });
-  } else if (src) {
-
-    const id = Date.now();
-    db.ref('tokens/' + id).set({
-      id,
-      src,
-      top: e.clientY - rect.top,
-      left: e.clientX - rect.left,
-      width: cellSize,
-      height: cellSize
-    });
-  }
-});
-
-
     const backgroundInput = document.getElementById('backgroundUpload');
     const background = document.getElementById('background');
 
     function startRealtimeSync() {
+      db.ref('tokens').on('value', (snapshot) => {
+        const tokens = snapshot.val() || {};
+        document.querySelectorAll('.token').forEach(el => el.remove());
+        for (let key in tokens) {
+          const data = tokens[key];
+          const img = document.createElement('img');
+          img.src = data.src;
+          img.classList.add('token');
+          img.draggable = true;
+          img.style.top = `${data.top}px`;
+          img.style.left = `${data.left}px`;
+          img.style.width = `${data.width}px`;
+          img.style.height = `${data.height}px`;
+
+          let offsetX, offsetY;
+
+          img.addEventListener('dragstart', (e) => {
+            offsetX = e.offsetX;
+            offsetY = e.offsetY;
+            e.dataTransfer.setData('tokenId', data.id);
+          });
+
+          img.addEventListener('dragend', (e) => {
+            const rect = grid.getBoundingClientRect();
+            const newLeft = e.clientX - rect.left - offsetX;
+            const newTop = e.clientY - rect.top - offsetY;
+            db.ref('tokens/' + data.id).update({ left: newLeft, top: newTop });
+          });
+
+          grid.appendChild(img);
+        }
+      });
+
       db.ref('background').on('value', (snapshot) => {
         if (snapshot.val()) {
           background.src = snapshot.val();
@@ -333,6 +297,41 @@ upload.addEventListener('change', (e) => {
 
         reader.readAsDataURL(file);
         e.target.value = "";
+      });
+
+      // Biblioteka tokeny
+      document.querySelectorAll('.library-token').forEach(token => {
+        token.addEventListener('dragstart', (e) => {
+          e.dataTransfer.setData('src', token.src);
+        });
+      });
+
+      // Grid dragover a drop
+      grid.addEventListener('dragover', (e) => e.preventDefault());
+      grid.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const rect = grid.getBoundingClientRect();
+        const tokenId = e.dataTransfer.getData('tokenId'); 
+        const src = e.dataTransfer.getData('src');          
+
+        if (tokenId) {
+          const newLeft = e.clientX - rect.left;
+          const newTop = e.clientY - rect.top;
+          db.ref('tokens/' + tokenId).update({
+            left: newLeft,
+            top: newTop
+          });
+        } else if (src) {
+          const id = Date.now();
+          db.ref('tokens/' + id).set({
+            id,
+            src,
+            top: e.clientY - rect.top,
+            left: e.clientX - rect.left,
+            width: cellSize,
+            height: cellSize
+          });
+        }
       });
     }
 
