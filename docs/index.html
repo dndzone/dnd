@@ -91,7 +91,8 @@
       position: absolute;
       top: 0;
       left: 0;
-      z-index: 1.5;
+      z-index: 3; /* nad tokeny */
+      touch-action: none; /* zabrání implicitním posunům při kreslení na dotykových zařízeních */
     }  
 
 
@@ -381,6 +382,10 @@ const clearCanvasBtn = document.getElementById('clearCanvas');
 toggleDrawBtn.addEventListener('click', () => {
   drawMode = !drawMode;
   drawCanvas.style.pointerEvents = drawMode ? 'auto' : 'none';
+  // while drawing, make tokens non-interactive so canvas receives pointer events
+  document.querySelectorAll('.token').forEach(t => {
+    t.style.pointerEvents = drawMode ? 'none' : 'auto';
+  });
   toggleDrawBtn.textContent = drawMode ? 'Vypnout kreslení' : 'Režim kreslení';
 });
 
@@ -402,6 +407,42 @@ drawCanvas.addEventListener('mousemove', (e) => {
   ctx.lineWidth = 2;
   ctx.lineTo(e.offsetX, e.offsetY);
   ctx.stroke();
+});
+
+// touch support
+function getTouchPos(touchEvent) {
+  const rect = drawCanvas.getBoundingClientRect();
+  const t = touchEvent.touches[0] || touchEvent.changedTouches[0];
+  return {
+    x: t.clientX - rect.left,
+    y: t.clientY - rect.top
+  };
+}
+
+drawCanvas.addEventListener('touchstart', (e) => {
+  if (!drawMode) return;
+  e.preventDefault();
+  const pos = getTouchPos(e);
+  drawing = true;
+  ctx.beginPath();
+  ctx.moveTo(pos.x, pos.y);
+});
+
+drawCanvas.addEventListener('touchmove', (e) => {
+  if (!drawMode || !drawing) return;
+  e.preventDefault();
+  const pos = getTouchPos(e);
+  ctx.strokeStyle = drawColorInput.value;
+  ctx.lineWidth = 2;
+  ctx.lineTo(pos.x, pos.y);
+  ctx.stroke();
+});
+
+drawCanvas.addEventListener('touchend', (e) => {
+  if (!drawMode) return;
+  e.preventDefault();
+  drawing = false;
+  ctx.closePath();
 });
 
 drawCanvas.addEventListener('mouseup', () => {
