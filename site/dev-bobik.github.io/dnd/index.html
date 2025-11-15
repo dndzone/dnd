@@ -91,8 +91,7 @@
       position: absolute;
       top: 0;
       left: 0;
-      z-index: 3; /* nad tokeny */
-      touch-action: none; /* zabrání implicitním posunům při kreslení na dotykových zařízeních */
+      z-index: 1.5;
     }  
 
 
@@ -148,10 +147,6 @@
     </div>
     <div id="controls">
       <label>Barva kreslení: <input type="color" id="drawColor" value="#ff0000"></label>
-      <label>Šířka pera: 
-        <input type="range" id="brushWidth" min="1" max="50" value="2" step="1">
-        <span id="brushWidthValue">2</span>px
-      </label>
       <button id="toggleDraw">Režim kreslení</button>
       <button id="clearCanvas">Smazat kresby</button>
     </div>
@@ -379,209 +374,44 @@ const ctx = drawCanvas.getContext('2d');
 let drawing = false;
 let drawMode = false;
 
-// ensure canvas fills container visually
-drawCanvas.style.width = '100%';
-drawCanvas.style.height = '100%';
-
-ctx.lineCap = 'round';
-ctx.lineJoin = 'round';
-
 const drawColorInput = document.getElementById('drawColor');
 const toggleDrawBtn = document.getElementById('toggleDraw');
 const clearCanvasBtn = document.getElementById('clearCanvas');
-const brushWidthInput = document.getElementById('brushWidth');
-const brushWidthValue = document.getElementById('brushWidthValue');
-
-// Drawing sync with Firebase - define variables FIRST
-let currentStroke = null;
-let strokeId = null;
-const drawingSessionId = Date.now() + '_' + Math.random();
-const renderedStrokes = new Set();
-
-// Update brush width value display
-brushWidthInput.addEventListener('input', (e) => {
-  brushWidthValue.textContent = e.target.value;
-});
-
-// Load existing drawings from Firebase (once drawing vars are defined)
-db.ref('drawings').once('value', (snapshot) => {
-  const strokes = snapshot.val();
-  if (strokes) {
-    Object.entries(strokes).forEach(([id, stroke]) => {
-      if (stroke.sessionId !== drawingSessionId) {
-        drawStrokeFromData(stroke);
-        renderedStrokes.add(id);
-      }
-    });
-  }
-});
-
-// Listen for new strokes from other users/devices
-db.ref('drawings').on('child_added', (snapshot) => {
-  const id = snapshot.key;
-  const stroke = snapshot.val();
-  if (!renderedStrokes.has(id) && stroke.sessionId !== drawingSessionId) {
-    drawStrokeFromData(stroke);
-    renderedStrokes.add(id);
-  }
-});
 
 toggleDrawBtn.addEventListener('click', () => {
   drawMode = !drawMode;
   drawCanvas.style.pointerEvents = drawMode ? 'auto' : 'none';
-  // while drawing, make tokens non-interactive so canvas receives pointer events
-  document.querySelectorAll('.token').forEach(t => {
-    t.style.pointerEvents = drawMode ? 'none' : 'auto';
-  });
   toggleDrawBtn.textContent = drawMode ? 'Vypnout kreslení' : 'Režim kreslení';
 });
 
 
 clearCanvasBtn.addEventListener('click', () => {
   ctx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
-  renderedStrokes.clear();
-  db.ref('drawings').remove();
 });
-
-// Helper function for touch events
-function getTouchPos(touchEvent) {
-  const rect = drawCanvas.getBoundingClientRect();
-  const t = touchEvent.touches[0] || touchEvent.changedTouches[0];
-  return {
-    x: t.clientX - rect.left,
-    y: t.clientY - rect.top
-  };
-}
-
-// Load existing drawings
-db.ref('drawings').once('value', (snapshot) => {
-  const strokes = snapshot.val();
-  if (strokes) {
-    Object.entries(strokes).forEach(([id, stroke]) => {
-      if (stroke.sessionId !== drawingSessionId) {
-        drawStrokeFromData(stroke);
-        renderedStrokes.add(id);
-      }
-    });
-  }
-});
-
-// Listen for new strokes
-db.ref('drawings').on('child_added', (snapshot) => {
-  const id = snapshot.key;
-  const stroke = snapshot.val();
-  if (!renderedStrokes.has(id) && stroke.sessionId !== drawingSessionId) {
-    drawStrokeFromData(stroke);
-    renderedStrokes.add(id);
-  }
-});
-
-function drawStrokeFromData(stroke) {
-  ctx.strokeStyle = stroke.color;
-  ctx.lineWidth = stroke.width;
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
-  ctx.beginPath();
-  if (stroke.points.length > 0) {
-    ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
-    for (let i = 1; i < stroke.points.length; i++) {
-      ctx.lineTo(stroke.points[i].x, stroke.points[i].y);
-    }
-    ctx.stroke();
-  }
-}
 
 drawCanvas.addEventListener('mousedown', (e) => {
   if (!drawMode) return;
   drawing = true;
-  const rect = drawCanvas.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
-  strokeId = Date.now() + '_' + Math.random();
-  currentStroke = {
-    color: drawColorInput.value,
-    width: parseInt(brushWidthInput.value),
-    points: [{x, y}],
-    sessionId: drawingSessionId
-  };
   ctx.beginPath();
-  ctx.moveTo(x, y);
+  ctx.moveTo(e.offsetX, e.offsetY);
 });
 
 drawCanvas.addEventListener('mousemove', (e) => {
-  if (!drawMode || !drawing || !currentStroke) return;
-  const rect = drawCanvas.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
+  if (!drawMode || !drawing) return;
   ctx.strokeStyle = drawColorInput.value;
-  ctx.lineWidth = parseInt(brushWidthInput.value);
-  ctx.lineTo(x, y);
+  ctx.lineWidth = 2;
+  ctx.lineTo(e.offsetX, e.offsetY);
   ctx.stroke();
-  currentStroke.points.push({x, y});
-});
-
-drawCanvas.addEventListener('touchstart', (e) => {
-  if (!drawMode) return;
-  e.preventDefault();
-  const pos = getTouchPos(e);
-  drawing = true;
-  strokeId = Date.now() + '_' + Math.random();
-  currentStroke = {
-    color: drawColorInput.value,
-    width: parseInt(brushWidthInput.value),
-    points: [pos],
-    sessionId: drawingSessionId
-  };
-  ctx.beginPath();
-  ctx.moveTo(pos.x, pos.y);
-});
-
-drawCanvas.addEventListener('touchmove', (e) => {
-  if (!drawMode || !drawing || !currentStroke) return;
-  e.preventDefault();
-  const pos = getTouchPos(e);
-  ctx.strokeStyle = drawColorInput.value;
-  ctx.lineWidth = parseInt(brushWidthInput.value);
-  ctx.lineTo(pos.x, pos.y);
-  ctx.stroke();
-  currentStroke.points.push(pos);
-});
-
-drawCanvas.addEventListener('touchend', (e) => {
-  if (!drawMode || !currentStroke) return;
-  e.preventDefault();
-  drawing = false;
-  ctx.closePath();
-  if (currentStroke.points.length > 0 && strokeId) {
-    db.ref('drawings/' + strokeId).set(currentStroke);
-    renderedStrokes.add(strokeId);
-  }
-  currentStroke = null;
-  strokeId = null;
 });
 
 drawCanvas.addEventListener('mouseup', () => {
-  if (!drawing || !currentStroke) return;
   drawing = false;
   ctx.closePath();
-  if (currentStroke.points.length > 0 && strokeId) {
-    db.ref('drawings/' + strokeId).set(currentStroke);
-    renderedStrokes.add(strokeId);
-  }
-  currentStroke = null;
-  strokeId = null;
 });
 
 drawCanvas.addEventListener('mouseleave', () => {
-  if (!drawing || !currentStroke) return;
   drawing = false;
   ctx.closePath();
-  if (currentStroke.points.length > 0 && strokeId) {
-    db.ref('drawings/' + strokeId).set(currentStroke);
-    renderedStrokes.add(strokeId);
-  }
-  currentStroke = null;
-  strokeId = null;
 });
 
 
