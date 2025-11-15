@@ -116,6 +116,12 @@
       measurementId: "G-TJZZDNCV05"
     };
     firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    
+    // Initialize auth anonymously
+    firebase.auth().signInAnonymously().catch((error) => {
+      console.error('Firebase auth error:', error);
+    });
   </script>
 </head>
 <body>
@@ -403,7 +409,7 @@ brushWidthInput.addEventListener('input', (e) => {
   brushWidthValue.textContent = e.target.value;
 });
 
-// Load existing drawings from Firebase (once drawing vars are defined)
+// Load existing drawings
 db.ref('drawings').once('value', (snapshot) => {
   const strokes = snapshot.val();
   if (strokes) {
@@ -414,15 +420,17 @@ db.ref('drawings').once('value', (snapshot) => {
       }
     });
   }
+  console.log('Loaded existing drawings from Firebase');
 });
 
-// Listen for new strokes from other users/devices
+// Listen for new strokes
 db.ref('drawings').on('child_added', (snapshot) => {
   const id = snapshot.key;
   const stroke = snapshot.val();
   if (!renderedStrokes.has(id) && stroke.sessionId !== drawingSessionId) {
     drawStrokeFromData(stroke);
     renderedStrokes.add(id);
+    console.log('New stroke received from Firebase:', id);
   }
 });
 
@@ -565,7 +573,10 @@ drawCanvas.addEventListener('mouseup', () => {
   drawing = false;
   ctx.closePath();
   if (currentStroke.points.length > 0 && strokeId) {
-    db.ref('drawings/' + strokeId).set(currentStroke);
+    console.log('Sending stroke to Firebase:', strokeId, currentStroke.points.length, 'points');
+    db.ref('drawings/' + strokeId).set(currentStroke).catch(err => {
+      console.error('Firebase write error:', err);
+    });
     renderedStrokes.add(strokeId);
   }
   currentStroke = null;
