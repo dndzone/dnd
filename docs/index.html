@@ -414,28 +414,6 @@ clearCanvasBtn.addEventListener('click', () => {
   db.ref('drawings').remove();
 });
 
-drawCanvas.addEventListener('mousedown', (e) => {
-  if (!drawMode) return;
-  drawing = true;
-  const rect = drawCanvas.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
-  console.debug('draw mousedown', x, y);
-  ctx.beginPath();
-  ctx.moveTo(x, y);
-});
-
-drawCanvas.addEventListener('mousemove', (e) => {
-  if (!drawMode || !drawing) return;
-  const rect = drawCanvas.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
-  ctx.strokeStyle = drawColorInput.value;
-  ctx.lineWidth = parseInt(brushWidthInput.value);
-  ctx.lineTo(x, y);
-  ctx.stroke();
-});
-
 // Drawing sync with Firebase - simple approach
 let currentStroke = null;
 let strokeId = null;
