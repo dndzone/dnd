@@ -148,6 +148,10 @@
     </div>
     <div id="controls">
       <label>Barva kreslení: <input type="color" id="drawColor" value="#ff0000"></label>
+      <label>Šířka pera: 
+        <input type="range" id="brushWidth" min="1" max="50" value="2" step="1">
+        <span id="brushWidthValue">2</span>px
+      </label>
       <button id="toggleDraw">Režim kreslení</button>
       <button id="clearCanvas">Smazat kresby</button>
     </div>
@@ -385,6 +389,13 @@ ctx.lineJoin = 'round';
 const drawColorInput = document.getElementById('drawColor');
 const toggleDrawBtn = document.getElementById('toggleDraw');
 const clearCanvasBtn = document.getElementById('clearCanvas');
+const brushWidthInput = document.getElementById('brushWidth');
+const brushWidthValue = document.getElementById('brushWidthValue');
+
+// Update brush width value display
+brushWidthInput.addEventListener('input', (e) => {
+  brushWidthValue.textContent = e.target.value;
+});
 
 toggleDrawBtn.addEventListener('click', () => {
   drawMode = !drawMode;
@@ -418,7 +429,7 @@ drawCanvas.addEventListener('mousemove', (e) => {
   const x = e.clientX - rect.left;
   const y = e.clientY - rect.top;
   ctx.strokeStyle = drawColorInput.value;
-  ctx.lineWidth = 2;
+  ctx.lineWidth = parseInt(brushWidthInput.value);
   ctx.lineTo(x, y);
   ctx.stroke();
 });
@@ -447,7 +458,7 @@ drawCanvas.addEventListener('touchmove', (e) => {
   e.preventDefault();
   const pos = getTouchPos(e);
   ctx.strokeStyle = drawColorInput.value;
-  ctx.lineWidth = 2;
+  ctx.lineWidth = parseInt(brushWidthInput.value);
   ctx.lineTo(pos.x, pos.y);
   ctx.stroke();
 });
